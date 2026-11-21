@@ -64,6 +64,9 @@ html[data-theme=dark] .welcome{background:linear-gradient(115deg,#294638,#385840
 
 /* v25: flat cards, without pale drop shadows; retain green accent border */
 .panel, .welcome, .ingredient-panel, .basics-panel { box-shadow: none !important; }
+
+/* v26: fjern bare den lyse ytterkanten på grunnopplysninger; behold grønn venstrestrek */
+.basics-panel{border-top-color:transparent!important;border-right-color:transparent!important;border-bottom-color:transparent!important;border-left:4px solid var(--accent)!important;box-shadow:none!important}
 </style></head><body><header><div class="top"><div><h1>🍞 Brødjournal</h1><div>Min personlige bakebok</div></div><button class="secondary" id="themeBtn" type="button">🌙 Mørk modus</button></div></header>
 <main>
 <section class="welcome"><div><div class="eyebrow">DIN DIGITALE BAKEBOK</div><h2>Bak noe godt i dag.</h2><p>Samle favorittoppskriftene dine, juster ingrediensene og ta vare på resultatet.</p></div><div class="welcome-icon" aria-hidden="true">🥖</div></section>
