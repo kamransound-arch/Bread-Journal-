@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="no"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#28211d"><title>Brødjournal 🍞</title>
+<html lang="no"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#28211d"><title>Bread Journal 🍞</title>
 <style>
 
 :root{color-scheme:light;--bg:#f5f4ef;--panel:#fff;--text:#242e29;--muted:#737e77;--line:#e1e7e1;--accent:#287653;--accent-hover:#1f6043;--input:#f7f9f6;--head:#173f31;--shadow:0 8px 30px rgba(24,53,37,.045)}
@@ -18,7 +18,7 @@ button{border:0;border-radius:12px;padding:11px 17px;min-height:46px;cursor:poin
 @media print{@page{size:A4;margin:15mm}html,html[data-theme=dark]{color-scheme:light!important}body{background:#fff!important;color:#171717!important;font:11pt Georgia,serif!important}header,main{display:none!important}#printSheet{display:block!important;color:#171717;background:#fff}#printSheet h1{font-size:25pt;margin:0 0 8px}#printSheet h2{font-size:14pt;border-bottom:1px solid #aaa;margin:16px 0 7px}#printSheet .details{margin:8px 0 18px;color:#555}#printSheet ul{padding-left:20px;margin:4px 0}#printSheet li{margin:3px 0}#printSheet .gallery{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}#printSheet img{width:46%;max-height:105mm;object-fit:contain;break-inside:avoid}#printSheet section{break-inside:avoid}#printSheet .notes{white-space:pre-wrap;line-height:1.5}#printSheet footer{font-size:9pt;color:#777;margin-top:22px}}
 
 
-/* Brødjournal v19: redesigned editorial layout */
+/* Bread Journal v28: redesigned editorial layout */
 :root{--bg:#f7f5f0;--panel:#fffefa;--text:#26352e;--muted:#738078;--line:#e6e9df;--accent:#2e7654;--input:#f4f6f0;--shadow:0 10px 35px rgba(41,52,38,.045)}
 html[data-theme=dark]{--bg:#121a17;--panel:#1c2822;--text:#f0f5ec;--muted:#a4b8aa;--line:#34483c;--accent:#81d6a5;--input:#27372e;--shadow:0 10px 35px rgba(0,0,0,.13)}
 body{font-size:15px}header{padding:18px 26px;background:#193d2c}header .top{max-width:1280px}header h1{font-size:27px}main{max-width:1280px;padding:30px 24px 100px}
@@ -67,12 +67,15 @@ html[data-theme=dark] .welcome{background:linear-gradient(115deg,#294638,#385840
 
 /* v26: fjern bare den lyse ytterkanten på grunnopplysninger; behold grønn venstrestrek */
 .basics-panel{border-top-color:transparent!important;border-right-color:transparent!important;border-bottom-color:transparent!important;border-left:4px solid var(--accent)!important;box-shadow:none!important}
-</style></head><body><header><div class="top"><div><h1>🍞 Brødjournal</h1><div>Min personlige bakebok</div></div><button class="secondary" id="themeBtn" type="button">🌙 Mørk modus</button></div></header>
+
+/* v27: Same border on all four sides, no green accent stripe */
+.basics-panel { border: 1px solid var(--line) !important; }
+</style></head><body><header><div class="top"><div><h1>🍞 Bread Journal</h1><div>Min personlige bakebok</div></div><button class="secondary" id="themeBtn" type="button">🌙 Mørk modus</button></div></header>
 <main>
 <section class="welcome"><div><div class="eyebrow">DIN DIGITALE BAKEBOK</div><h2>Bak noe godt i dag.</h2><p>Samle favorittoppskriftene dine, juster ingrediensene og ta vare på resultatet.</p></div><div class="welcome-icon" aria-hidden="true">🥖</div></section>
 <div class="toolbar"><button class="primary" id="newBtn">＋ Ny oppskrift</button><button class="secondary" id="pdfBtn">📄 Del oppskrift som PDF</button><button class="secondary" id="exportBtn">Eksporter backup</button><button class="secondary" id="importBtn">Importer backup</button><input type="file" id="importFile" accept=".json,application/json" hidden></div>
 <section class="panel" id="cloudPanel"><div class="section-kicker">☁️ SKY / KONTO</div>
-<div class="cloud-heading"><div><h2>Min Brødjournal-konto</h2><p id="cloudCompactStatus" class="hint">Trykk for å vise kontoinnstillinger</p></div><button type="button" class="secondary" id="cloudToggle" aria-controls="cloudDetails" aria-expanded="false">Vis konto ▾</button></div>
+<div class="cloud-heading"><div><h2>Min Bread Journal-konto</h2><p id="cloudCompactStatus" class="hint">Trykk for å vise kontoinnstillinger</p></div><button type="button" class="secondary" id="cloudToggle" aria-controls="cloudDetails" aria-expanded="false">Vis konto ▾</button></div>
 <div id="cloudDetails" hidden>
 <p class="hint">Oppskrifter lagres fortsatt lokalt til du kobler til og logger inn. Eksporter en backup først.</p>
 <div class="field"><label for="cloudUrl">Supabase Project URL</label><input id="cloudUrl" value="https://kkpvssmzffpczquthwyf.supabase.co" placeholder="https://...supabase.co" autocapitalize="off" spellcheck="false"></div>
@@ -191,7 +194,7 @@ function printRecipe(){
  const bake=document.createElement('section');add(bake,'h2','Heving og steking');const proof=Number($('proof').value);add(bake,'p','Hevetid: '+(proof<60?proof+' minutter':proof%60===0?proof/60+' timer':Math.floor(proof/60)+' t '+proof%60+' min')+' · Steketemperatur: '+$('temp').value+' °C · Steketid: '+$('bake').value+' minutter');sheet.append(bake);
  if($('notes').value.trim()){const sec=document.createElement('section');add(sec,'h2','Fremgangsmåte og notater');add(sec,'div',$('notes').value,'notes');sheet.append(sec)}
  if(photoData.length){add(sheet,'h2','Bilder');const gallery=document.createElement('div');gallery.className='gallery';for(const src of photoData){const img=document.createElement('img');img.src=src;img.alt='Bilde av brødet';gallery.append(img)}sheet.append(gallery)}
- add(sheet,'footer','Brødjournal · Personlig oppskrift');
+ add(sheet,'footer','Bread Journal · Personlig oppskrift');
  // Images already stored as data URLs. Print the current edited recipe, even before saving.
  const imgs=[...sheet.querySelectorAll('img')];Promise.all(imgs.map(img=>img.complete?Promise.resolve():new Promise(resolve=>{img.onload=resolve;img.onerror=resolve}))).then(()=>window.print());
  }catch(e){status('PDF kunne ikke lages: '+e.message)}
