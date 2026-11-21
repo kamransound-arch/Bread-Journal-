@@ -26,8 +26,8 @@ const $=id=>document.getElementById(id);
 const specs=[
 {id:'flour',title:'🌾 Meltyper',types:['Hvetemel','Sammalt hvete fin','Sammalt hvete grov','Rugmel fint','Rugmel grovt','Speltmel','Byggmel','Havremel','Emmermel','Annet'],unit:'g',start:100,end:1000,step:25},
 {id:'liquid',title:'💧 Vann og væske',types:['Vann','Melk','Kefir','Yoghurt','Surmelk','Øl','Annet'],unit:'ml',start:100,end:1000,step:25},
-{id:'seedIn',title:'🌻 Frø inni brødet',types:['Solsikkefrø','Linfrø','Sesamfrø','Chiafrø','Gresskarkjerner','Valmuefrø','Hampfrø','Annet'],unit:'g',start:10,end:100,step:5},
-{id:'seedOut',title:'✨ Frø utenpå brødet',types:['Solsikkefrø','Linfrø','Sesamfrø','Chiafrø','Gresskarkjerner','Valmuefrø','Hampfrø','Annet'],unit:'g',start:10,end:100,step:5},
+{id:'seedIn',title:'🌻 Frø inni brødet',types:['Solsikkefrø','Linfrø','Sesamfrø','Chiafrø','Gresskarkjerner','Valmuefrø','Hampfrø','Annet'],unit:'g',start:5,end:100,step:5},
+{id:'seedOut',title:'✨ Frø utenpå brødet',types:['Solsikkefrø','Linfrø','Sesamfrø','Chiafrø','Gresskarkjerner','Valmuefrø','Hampfrø','Annet'],unit:'g',start:5,end:100,step:5},
 {id:'soak',title:'🥣 Lake og bløtlegging',types:['Vann','Hvetemel','Rugmel','Speltmel','Sammalt hvete','Saltlake','Bløtlegging','Annet'],unit:'ml',start:25,end:1000,step:25,units:['ml','g']},
 {id:'oil',title:'🫒 Olje og fett',types:['Olivenolje','Rapsolje','Solsikkeolje','Smør','Kokosolje','Annet'],unit:'ml',start:5,end:200,step:5,units:['ml','g']},
 {id:'salt',title:'🧂 Salt',types:['Fint salt','Havsalt','Flaksalt','Annet'],unit:'g',start:5,end:50,step:5},
@@ -37,7 +37,7 @@ const specs=[
 ];
 let recipeId=null, photoData=[], db;
 function opt(select,values,selected){select.replaceChildren();values.forEach(([v,t])=>{let o=document.createElement('option');o.value=String(v);o.textContent=t;select.append(o)});if(selected!==undefined)select.value=String(selected)}
-function numberOptions(a,b,s,unit){let out=[];for(let n=a;n<=b;n+=s)out.push([n,n+' '+unit]);out.push(['custom','＋ Egen mengde']);return out}
+function numberOptions(a,b,s,unit){let out=[];for(let n=a;n<=b;n+=s)out.push([n,String(n)]);out.push(['custom','＋ Egen mengde']);return out}
 function addRow(spec,data={}){
  const area=$('rows-'+spec.id),row=document.createElement('div');row.className='ingredient';
  const type=document.createElement('select');type.setAttribute('aria-label','Type');
@@ -45,7 +45,7 @@ function addRow(spec,data={}){
  opt(type,types.map(t=>[t,t]),data.type||spec.types[0]);
  const amount=document.createElement('select');amount.setAttribute('aria-label','Mengde');
  const unit=document.createElement('select');unit.setAttribute('aria-label','Enhet');
- const units=spec.units||[spec.unit];opt(unit,units.map(x=>[x,x]),data.unit||spec.unit);
+ const units=spec.units||[spec.unit];opt(unit,units.map(x=>[x,x]),data.unit||spec.unit);if(units.length===1){unit.disabled=true;unit.setAttribute('aria-label','Enhet '+spec.unit)}
  const custom=document.createElement('input');custom.type='number';custom.inputMode='decimal';custom.min='0';custom.step='any';custom.placeholder='Skriv egen mengde';custom.value=data.amount??'';custom.setAttribute('aria-label','Egen mengde');custom.className='custom';
  function updateAmounts(){
    const u=unit.value;const opts=numberOptions(spec.start,spec.end,spec.step,u);
