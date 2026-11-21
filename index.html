@@ -60,11 +60,14 @@ html[data-theme=dark] .welcome{background:linear-gradient(115deg,#294638,#385840
 .basics-panel .date-clip{position:relative;display:block;width:100%;max-width:100%;min-width:0;height:52px;overflow:hidden;border-radius:11px;background:var(--input)}
 .basics-panel .date-clip #date{position:absolute;inset:0!important;display:block!important;width:100%!important;max-width:100%!important;min-width:0!important;height:52px!important;min-height:52px!important;margin:0!important;box-sizing:border-box!important;padding:10px 12px!important;font-size:16px!important;border-radius:11px!important;overflow:hidden!important}
 @media(max-width:600px){.basics-panel .grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.basics-panel .field:nth-child(-n+2){grid-column:1/-1}}
+#cloudPanel .cloud-heading{display:flex;justify-content:space-between;align-items:center;gap:12px}#cloudPanel .cloud-heading h2{margin:0}#cloudPanel .cloud-heading .hint{margin:5px 0 0}#cloudToggle{flex-shrink:0;white-space:nowrap}#cloudDetails{padding-top:18px}#cloudDetails[hidden]{display:none!important}
 </style></head><body><header><div class="top"><div><h1>🍞 Brødjournal</h1><div>Min personlige bakebok</div></div><button class="secondary" id="themeBtn" type="button">🌙 Mørk modus</button></div></header>
 <main>
 <section class="welcome"><div><div class="eyebrow">DIN DIGITALE BAKEBOK</div><h2>Bak noe godt i dag.</h2><p>Samle favorittoppskriftene dine, juster ingrediensene og ta vare på resultatet.</p></div><div class="welcome-icon" aria-hidden="true">🥖</div></section>
 <div class="toolbar"><button class="primary" id="newBtn">＋ Ny oppskrift</button><button class="secondary" id="pdfBtn">📄 Del oppskrift som PDF</button><button class="secondary" id="exportBtn">Eksporter backup</button><button class="secondary" id="importBtn">Importer backup</button><input type="file" id="importFile" accept=".json,application/json" hidden></div>
-<section class="panel" id="cloudPanel"><div class="section-kicker">☁️ SKY / KONTO</div><h2>Min Brødjournal-konto</h2>
+<section class="panel" id="cloudPanel"><div class="section-kicker">☁️ SKY / KONTO</div>
+<div class="cloud-heading"><div><h2>Min Brødjournal-konto</h2><p id="cloudCompactStatus" class="hint">Trykk for å vise kontoinnstillinger</p></div><button type="button" class="secondary" id="cloudToggle" aria-controls="cloudDetails" aria-expanded="false">Vis konto ▾</button></div>
+<div id="cloudDetails" hidden>
 <p class="hint">Oppskrifter lagres fortsatt lokalt til du kobler til og logger inn. Eksporter en backup først.</p>
 <div class="field"><label for="cloudUrl">Supabase Project URL</label><input id="cloudUrl" value="https://kkpvssmzffpczquthwyf.supabase.co" placeholder="https://...supabase.co" autocapitalize="off" spellcheck="false"></div>
 <div class="field"><label for="cloudKey">Publishable key (ikke hemmelig nøkkel)</label><input id="cloudKey" value="sb_publishable_vi1Jj02j3DVsQPXX7gvBwg_QJ_YhCke" placeholder="sb_publishable_..." autocapitalize="off" spellcheck="false"></div>
@@ -73,6 +76,7 @@ html[data-theme=dark] .welcome{background:linear-gradient(115deg,#294638,#385840
 <div class="toolbar"><button class="secondary" id="signUp" type="button">Opprett konto</button><button class="primary" id="signIn" type="button">Logg inn</button><button class="secondary" id="signOut" type="button">Logg ut</button></div></div>
 <p class="status" id="cloudStatus" role="status"></p>
 <div id="cloudActions" hidden><div class="toolbar"><button class="secondary" id="cloudRefresh" type="button">Oppdater skyliste</button><button class="secondary" id="migrateCloud" type="button">Kopier lokale oppskrifter til skyen</button></div><h3>Mine oppskrifter i skyen</h3><div id="cloudList"></div></div>
+</div>
 </section>
 <section class="panel" id="sharedPanel" hidden><h2>🔗 Delt oppskrift</h2><div id="sharedResult"></div></section>
 <section class="panel library-panel"><h2><span class="heading-icon">📚</span> Mine oppskrifter</h2><div id="recipeList"></div></section>
@@ -192,7 +196,7 @@ async function importBackup(e){const f=e.target.files[0];if(!f)return;try{const 
 
 // Cloud is opt-in; existing IndexedDB recipes are never deleted or overwritten.
 let cloudClient=null,cloudUser=null,cloudRecipes=[];
-const cloudMsg=t=>{ $('cloudStatus').textContent=t };
+const cloudMsg=t=>{ $('cloudStatus').textContent=t; $('cloudCompactStatus').textContent=t||'Trykk for å vise kontoinnstillinger' };
 function cloudConfig(){return {url:$('cloudUrl').value.trim().replace(/\/$/,''),key:$('cloudKey').value.trim()}}
 async function cloudConnect(){
  const {url,key}=cloudConfig();
@@ -277,6 +281,11 @@ async function showShared(){
  area.scrollIntoView({behavior:'smooth'});
 }
 function cloudInit(){
+ const details=$('cloudDetails'),toggle=$('cloudToggle');
+ const setOpen=(open)=>{details.hidden=!open;toggle.textContent=open?'Skjul konto ▴':'Vis konto ▾';toggle.setAttribute('aria-expanded',String(open));localStorage.setItem('bread-cloud-expanded',String(open))};
+ setOpen(localStorage.getItem('bread-cloud-expanded')==='true');
+ toggle.onclick=()=>setOpen(details.hidden);
+
  const saved=localStorage.getItem('bread-cloud-public');if(saved){try{const c=JSON.parse(saved);$('cloudUrl').value=(c.url||'').replace('kkpvssmzffpczquthwvf','kkpvssmzffpczquthwyf')||$('cloudUrl').value;$('cloudKey').value=c.key||'';cloudConnect().then(showShared)}catch{}}
  $('connectCloud').onclick=()=>cloudConnect().then(showShared);
  $('signUp').onclick=()=>cloudAuth('signup');$('signIn').onclick=()=>cloudAuth('signin');$('signOut').onclick=cloudLogout;
