@@ -64,6 +64,17 @@ html[data-theme=dark] .welcome{background:linear-gradient(115deg,#294638,#385840
 <main>
 <section class="welcome"><div><div class="eyebrow">DIN DIGITALE BAKEBOK</div><h2>Bak noe godt i dag.</h2><p>Samle favorittoppskriftene dine, juster ingrediensene og ta vare på resultatet.</p></div><div class="welcome-icon" aria-hidden="true">🥖</div></section>
 <div class="toolbar"><button class="primary" id="newBtn">＋ Ny oppskrift</button><button class="secondary" id="pdfBtn">📄 Del oppskrift som PDF</button><button class="secondary" id="exportBtn">Eksporter backup</button><button class="secondary" id="importBtn">Importer backup</button><input type="file" id="importFile" accept=".json,application/json" hidden></div>
+<section class="panel" id="cloudPanel"><div class="section-kicker">☁️ SKY / KONTO</div><h2>Min Brødjournal-konto</h2>
+<p class="hint">Oppskrifter lagres fortsatt lokalt til du kobler til og logger inn. Eksporter en backup først.</p>
+<div class="field"><label for="cloudUrl">Supabase Project URL</label><input id="cloudUrl" value="https://kkpvssmzffpczquthwvf.supabase.co" placeholder="https://...supabase.co" autocapitalize="off" spellcheck="false"></div>
+<div class="field"><label for="cloudKey">Publishable key (ikke hemmelig nøkkel)</label><input id="cloudKey" value="sb_publishable_vi1Jj02j3DVsQPXX7gvBwg_QJ_YhCke" placeholder="sb_publishable_..." autocapitalize="off" spellcheck="false"></div>
+<div class="toolbar"><button class="secondary" id="connectCloud" type="button">Koble til Supabase</button></div>
+<div id="authFields" hidden><div class="field"><label for="cloudEmail">E-post</label><input id="cloudEmail" type="email" autocomplete="email"></div><div class="field"><label for="cloudPassword">Passord</label><input id="cloudPassword" type="password" autocomplete="current-password"></div>
+<div class="toolbar"><button class="secondary" id="signUp" type="button">Opprett konto</button><button class="primary" id="signIn" type="button">Logg inn</button><button class="secondary" id="signOut" type="button">Logg ut</button></div></div>
+<p class="status" id="cloudStatus" role="status"></p>
+<div id="cloudActions" hidden><div class="toolbar"><button class="secondary" id="cloudRefresh" type="button">Oppdater skyliste</button><button class="secondary" id="migrateCloud" type="button">Kopier lokale oppskrifter til skyen</button></div><h3>Mine oppskrifter i skyen</h3><div id="cloudList"></div></div>
+</section>
+<section class="panel" id="sharedPanel" hidden><h2>🔗 Delt oppskrift</h2><div id="sharedResult"></div></section>
 <section class="panel library-panel"><h2><span class="heading-icon">📚</span> Mine oppskrifter</h2><div id="recipeList"></div></section>
 <section class="panel basics-panel" id="editor"><div class="section-kicker">01 / GRUNNOPPLYSNINGER</div><h2 id="editorTitle">Ny oppskrift</h2>
 <div class="grid"><div class="field"><label for="name">Navn på brødet</label><input id="name" placeholder="F.eks. grovt landbrød"></div><div class="field"><label for="date">Dato</label><div class="date-clip"><input id="date" type="date"></div></div><div class="field"><label for="count">Antall brød</label><select id="count"></select></div><div class="field"><label for="weight">Vekt per brød (g)</label><select id="weight"></select></div></div></section>
@@ -75,6 +86,7 @@ html[data-theme=dark] .welcome{background:linear-gradient(115deg,#294638,#385840
 <p class="hint">Oppskrifter og bilder lagres lokalt i denne nettleseren. Eksporter sikkerhetskopi jevnlig. Data synkroniseres ikke automatisk mellom iPhone og Mac.</p>
 </main>
 <article id="printSheet" aria-label="Utskriftsvennlig oppskrift"></article>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script>
 'use strict';
 const $=id=>document.getElementById(id);
@@ -151,11 +163,12 @@ async function save(){
  if(!$('name').value.trim()){status('Skriv inn navn på brødet.');$('name').focus();return}
  try{
   const r={id:recipeId||(crypto.randomUUID?crypto.randomUUID():String(Date.now())),name:$('name').value.trim(),date:$('date').value,count:Number($('count').value),weight:Number($('weight').value),proof:Number($('proof').value),temp:Number($('temp').value),bake:Number($('bake').value),notes:$('notes').value,ingredients:getIngredients(),photos:[...photoData]};
-  await put(r);recipeId=r.id;$('deleteBtn').hidden=false;status('✓ Oppskriften er lagret!');await refreshList();
+  await put(r);recipeId=r.id;$('deleteBtn').hidden=false;status('✓ Oppskriften er lagret lokalt!');await refreshList();
+  if(cloudUser){try{await uploadCloudRecipe(r);status('✓ Oppskriften er lagret lokalt og i skyen!');await loadCloud()}catch(syncError){status('Lagret lokalt, men ikke i skyen: '+syncError.message)}}
  }catch(e){status('Lagring feilet: '+e.message+'. Prøv færre eller mindre bilder.')}
 }
 async function refreshList(){try{const arr=(await allRecipes()).sort((a,b)=>b.date.localeCompare(a.date));$('recipeList').replaceChildren();if(!arr.length){$('recipeList').textContent='Ingen lagrede oppskrifter ennå.';return}for(const r of arr){const div=document.createElement('div');div.className='recipe';if(r.photos?.[0]){const img=document.createElement('img');img.src=r.photos[0];div.append(img)}const meta=document.createElement('div');meta.className='meta';const strong=document.createElement('strong');strong.textContent=r.name;const info=document.createElement('div');info.className='hint';info.textContent=r.date+' · '+r.count+' brød';meta.append(strong,info);const btn=document.createElement('button');btn.className='secondary small';btn.textContent='Åpne';btn.onclick=()=>{newRecipe(r);$('editor').scrollIntoView({behavior:'smooth'})};div.append(meta,btn);$('recipeList').append(div)}}catch(e){status('Kunne ikke lese oppskrifter: '+e.message)}}
-async function removeRecipe(){if(!recipeId||!confirm('Slette denne oppskriften?'))return;await del(recipeId);newRecipe();refreshList()}
+async function removeRecipe(){if(!recipeId||!confirm('Slette den lokale kopien? Eventuell skykopi beholdes.'))return;await del(recipeId);newRecipe();refreshList()}
 function download(name,data){const a=document.createElement('a'),url=URL.createObjectURL(new Blob([data],{type:'application/json'}));a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),2000)}
 
 function printRecipe(){
@@ -176,5 +189,99 @@ function printRecipe(){
 
 async function exportBackup(){try{download('brodjournal-backup.json',JSON.stringify({version:12,recipes:await allRecipes()}));status('Backup eksportert.')}catch(e){status('Eksport feilet: '+e.message)}}
 async function importBackup(e){const f=e.target.files[0];if(!f)return;try{const obj=JSON.parse(await f.text());if(!Array.isArray(obj.recipes))throw Error('Ugyldig backup');for(const r of obj.recipes)if(r.id&&r.name)await put(r);await refreshList();status('Backup importert: '+obj.recipes.length+' oppskrifter.')}catch(err){status('Import feilet: '+err.message)}e.target.value=''}
-setup();
+
+// Cloud is opt-in; existing IndexedDB recipes are never deleted or overwritten.
+let cloudClient=null,cloudUser=null,cloudRecipes=[];
+const cloudMsg=t=>{ $('cloudStatus').textContent=t };
+function cloudConfig(){return {url:$('cloudUrl').value.trim().replace(/\/$/,''),key:$('cloudKey').value.trim()}}
+async function cloudConnect(){
+ const {url,key}=cloudConfig();
+ if(!/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(url)){cloudMsg('Kontroller Project URL (https://...supabase.co).');return}
+ if(!key.startsWith('sb_publishable_')&&!key.startsWith('eyJ')){cloudMsg('Bruk bare Publishable key / anon key. Aldri secret/service_role.');return}
+ if(!window.supabase?.createClient){cloudMsg('Kunne ikke laste Supabase-biblioteket. Sjekk internett.');return}
+ try{
+  cloudClient=window.supabase.createClient(url,key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+  localStorage.setItem('bread-cloud-public',JSON.stringify({url,key}));
+  $('authFields').hidden=false;
+  const {data,error}=await cloudClient.auth.getUser();if(error&&error.name!=='AuthSessionMissingError')throw error;
+  cloudUser=data?.user||null;await cloudRefreshState();
+ }catch(e){cloudMsg('Tilkobling feilet: '+e.message)}
+}
+async function cloudRefreshState(){
+ $('cloudActions').hidden=!cloudUser;
+ cloudMsg(cloudUser?'Innlogget som '+cloudUser.email+' · Skylagring er aktiv.':'Tilkoblet. Logg inn eller opprett konto.');
+ if(cloudUser)await loadCloud();
+}
+async function cloudAuth(kind){
+ if(!cloudClient){cloudMsg('Koble til Supabase først.');return}
+ const email=$('cloudEmail').value.trim(),password=$('cloudPassword').value;
+ if(!email||!password){cloudMsg('Skriv inn e-post og passord.');return}
+ try{
+  const {data,error}=await (kind==='signup'?cloudClient.auth.signUp({email,password}):cloudClient.auth.signInWithPassword({email,password}));
+  if(error)throw error;
+  cloudUser=data.user||null;
+  if(kind==='signup'&&!data.session){cloudMsg('Konto opprettet. Bekreft e-posten før du logger inn.');return}
+  await cloudRefreshState();
+ }catch(e){cloudMsg('Innlogging feilet: '+e.message)}
+}
+async function cloudLogout(){if(cloudClient)await cloudClient.auth.signOut();cloudUser=null;cloudRecipes=[];$('cloudList').replaceChildren();await cloudRefreshState()}
+function cloudPayload(r){return {id:r.id,user_id:cloudUser.id,title:r.name,recipe_data:r}}
+async function uploadCloudRecipe(r){
+ if(!cloudUser)throw Error('Logg inn først.');
+ const {error}=await cloudClient.from('recipes').upsert(cloudPayload(r),{onConflict:'id'});
+ if(error)throw error;
+}
+async function migrateCloud(){
+ if(!cloudUser)return;
+ const arr=await allRecipes();
+ if(!arr.length){cloudMsg('Ingen lokale oppskrifter å kopiere.');return}
+ if(!confirm('Kopiere '+arr.length+' lokale oppskrifter til din konto i skyen? De lokale kopiene beholdes.'))return;
+ let done=0;try{for(const r of arr){await uploadCloudRecipe(r);done++}cloudMsg(done+' oppskrifter kopiert til skyen.');await loadCloud()}catch(e){cloudMsg(done+' kopiert. Feil: '+e.message)}
+}
+async function loadCloud(){
+ if(!cloudUser)return;
+ const {data,error}=await cloudClient.from('recipes').select('id,title,recipe_data,is_shared,share_token,updated_at').order('updated_at',{ascending:false});
+ if(error){cloudMsg('Kunne ikke hente skyoppskrifter: '+error.message);return}
+ cloudRecipes=data||[];const area=$('cloudList');area.replaceChildren();
+ if(!cloudRecipes.length){area.textContent='Ingen oppskrifter i skyen ennå.';return}
+ for(const rec of cloudRecipes){
+  const div=document.createElement('div');div.className='recipe';div.style.flexWrap='wrap';
+  const title=document.createElement('strong');title.textContent=rec.title;
+  const open=document.createElement('button');open.className='secondary small';open.textContent='Åpne';open.onclick=()=>{newRecipe(rec.recipe_data);$('editor').scrollIntoView({behavior:'smooth'})};
+  const share=document.createElement('button');share.className='secondary small';share.textContent=rec.is_shared?'Kopier delingslenke':'Del oppskrift';
+  share.onclick=async()=>{
+   try{
+    if(!rec.is_shared){const {error}=await cloudClient.from('recipes').update({is_shared:true}).eq('id',rec.id);if(error)throw error;rec.is_shared=true;share.textContent='Kopier delingslenke'}
+    const link=location.origin+location.pathname+'?share='+rec.share_token;
+    try{await navigator.clipboard.writeText(link);cloudMsg('Delingslenken er kopiert.')}catch{prompt('Kopier delingslenken:',link)}
+   }catch(e){cloudMsg('Deling feilet: '+e.message)}
+  };
+  const stop=document.createElement('button');stop.className='secondary small';stop.textContent='Stopp deling';stop.hidden=!rec.is_shared;
+  stop.onclick=async()=>{const {error}=await cloudClient.from('recipes').update({is_shared:false}).eq('id',rec.id);if(error)cloudMsg(error.message);else{rec.is_shared=false;stop.hidden=true;share.textContent='Del oppskrift';cloudMsg('Deling stoppet.')}};
+  div.append(title,open,share,stop);area.append(div);
+ }
+}
+async function showShared(){
+ const token=new URLSearchParams(location.search).get('share');
+ if(!token||!cloudClient)return;
+ if(!/^[0-9a-f-]{36}$/i.test(token))return;
+ const {data,error}=await cloudClient.rpc('get_shared_recipe',{p_token:token});
+ $('sharedPanel').hidden=false;const area=$('sharedResult');area.replaceChildren();
+ if(error||!data?.length){area.textContent='Denne oppskriften er ikke tilgjengelig.';return}
+ const r=data[0].recipe_data;
+ const title=document.createElement('h3');title.textContent=data[0].title;area.append(title);
+ const meta=document.createElement('p');meta.textContent=[r.date,r.count+' brød',r.weight+' g per brød'].join(' · ');area.append(meta);
+ for(const sp of specs){const entries=(r.ingredients?.[sp.id]||[]).filter(x=>x.amount>0);if(!entries.length)continue;const h=document.createElement('h4');h.textContent=sp.title;area.append(h);const ul=document.createElement('ul');for(const e of entries){const li=document.createElement('li');li.textContent=e.type+' – '+e.amount+' '+(e.unit||sp.unit);ul.append(li)}area.append(ul)}
+ const note=document.createElement('p');note.textContent=r.notes||'';note.style.whiteSpace='pre-wrap';area.append(note);
+ for(const photo of (r.photos||[])){if(typeof photo!=='string'||!photo.startsWith('data:image/'))continue;const img=document.createElement('img');img.src=photo;img.style.maxWidth='100%';img.style.borderRadius='12px';area.append(img)}
+ area.scrollIntoView({behavior:'smooth'});
+}
+function cloudInit(){
+ const saved=localStorage.getItem('bread-cloud-public');if(saved){try{const c=JSON.parse(saved);$('cloudUrl').value=c.url||'';$('cloudKey').value=c.key||'';cloudConnect().then(showShared)}catch{}}
+ $('connectCloud').onclick=()=>cloudConnect().then(showShared);
+ $('signUp').onclick=()=>cloudAuth('signup');$('signIn').onclick=()=>cloudAuth('signin');$('signOut').onclick=cloudLogout;
+ $('migrateCloud').onclick=migrateCloud;$('cloudRefresh').onclick=loadCloud;
+}
+
+setup();cloudInit();
 </script></body></html>
