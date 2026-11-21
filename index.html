@@ -66,7 +66,7 @@ html[data-theme=dark] .welcome{background:linear-gradient(115deg,#294638,#385840
 <div class="toolbar"><button class="primary" id="newBtn">＋ Ny oppskrift</button><button class="secondary" id="pdfBtn">📄 Del oppskrift som PDF</button><button class="secondary" id="exportBtn">Eksporter backup</button><button class="secondary" id="importBtn">Importer backup</button><input type="file" id="importFile" accept=".json,application/json" hidden></div>
 <section class="panel" id="cloudPanel"><div class="section-kicker">☁️ SKY / KONTO</div><h2>Min Brødjournal-konto</h2>
 <p class="hint">Oppskrifter lagres fortsatt lokalt til du kobler til og logger inn. Eksporter en backup først.</p>
-<div class="field"><label for="cloudUrl">Supabase Project URL</label><input id="cloudUrl" value="https://kkpvssmzffpczquthwvf.supabase.co" placeholder="https://...supabase.co" autocapitalize="off" spellcheck="false"></div>
+<div class="field"><label for="cloudUrl">Supabase Project URL</label><input id="cloudUrl" value="https://kkpvssmzffpczquthwyf.supabase.co" placeholder="https://...supabase.co" autocapitalize="off" spellcheck="false"></div>
 <div class="field"><label for="cloudKey">Publishable key (ikke hemmelig nøkkel)</label><input id="cloudKey" value="sb_publishable_vi1Jj02j3DVsQPXX7gvBwg_QJ_YhCke" placeholder="sb_publishable_..." autocapitalize="off" spellcheck="false"></div>
 <div class="toolbar"><button class="secondary" id="connectCloud" type="button">Koble til Supabase</button></div>
 <div id="authFields" hidden><div class="field"><label for="cloudEmail">E-post</label><input id="cloudEmail" type="email" autocomplete="email"></div><div class="field"><label for="cloudPassword">Passord</label><input id="cloudPassword" type="password" autocomplete="current-password"></div>
@@ -277,7 +277,7 @@ async function showShared(){
  area.scrollIntoView({behavior:'smooth'});
 }
 function cloudInit(){
- const saved=localStorage.getItem('bread-cloud-public');if(saved){try{const c=JSON.parse(saved);$('cloudUrl').value=c.url||'';$('cloudKey').value=c.key||'';cloudConnect().then(showShared)}catch{}}
+ const saved=localStorage.getItem('bread-cloud-public');if(saved){try{const c=JSON.parse(saved);$('cloudUrl').value=(c.url||'').replace('kkpvssmzffpczquthwvf','kkpvssmzffpczquthwyf')||$('cloudUrl').value;$('cloudKey').value=c.key||'';cloudConnect().then(showShared)}catch{}}
  $('connectCloud').onclick=()=>cloudConnect().then(showShared);
  $('signUp').onclick=()=>cloudAuth('signup');$('signIn').onclick=()=>cloudAuth('signin');$('signOut').onclick=cloudLogout;
  $('migrateCloud').onclick=migrateCloud;$('cloudRefresh').onclick=loadCloud;
