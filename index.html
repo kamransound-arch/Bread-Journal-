@@ -25,14 +25,14 @@ html[data-theme=dark]{color-scheme:dark;--bg:#171b1b;--panel:#252c2b;--text:#f1e
 const $=id=>document.getElementById(id);
 const specs=[
 {id:'flour',title:'🌾 Meltyper',types:['Hvetemel','Sammalt hvete fin','Sammalt hvete grov','Rugmel fint','Rugmel grovt','Speltmel','Byggmel','Havremel','Emmermel','Annet'],unit:'g',start:100,end:1000,step:25},
-{id:'liquid',title:'💧 Vann og væske',types:['Vann','Melk','Kefir','Yoghurt','Surmelk','Øl','Annet'],unit:'ml',start:100,end:1000,step:25},
+{id:'liquid',title:'💧 Vann og væske',types:['Vann','Melk','Kefir','Yoghurt','Surmelk','Øl','Annet'],unit:'ml',start:100,end:1000,step:25,units:['ml','g']},
 {id:'seedIn',title:'🌻 Frø inni brødet',types:['Solsikkefrø','Linfrø','Sesamfrø','Chiafrø','Gresskarkjerner','Valmuefrø','Hampfrø','Annet'],unit:'g',start:5,end:100,step:5},
 {id:'seedOut',title:'✨ Frø utenpå brødet',types:['Solsikkefrø','Linfrø','Sesamfrø','Chiafrø','Gresskarkjerner','Valmuefrø','Hampfrø','Annet'],unit:'g',start:5,end:100,step:5},
 {id:'soak',title:'🥣 Lake og bløtlegging',types:['Vann','Hvetemel','Rugmel','Speltmel','Sammalt hvete','Saltlake','Bløtlegging','Annet'],unit:'ml',start:25,end:1000,step:25,units:['ml','g']},
 {id:'oil',title:'🫒 Olje og fett',types:['Olivenolje','Rapsolje','Solsikkeolje','Smør','Kokosolje','Annet'],unit:'ml',start:5,end:200,step:5,units:['ml','g']},
 {id:'salt',title:'🧂 Salt',types:['Fint salt','Havsalt','Flaksalt','Annet'],unit:'g',start:5,end:50,step:5},
-{id:'sweet',title:'🍯 Sukker og sirup',types:['Sukker','Brunt sukker','Honning','Lys sirup','Mørk sirup','Annet'],unit:'g',start:5,end:200,step:5},
-{id:'other',title:'➕ Andre ingredienser',types:['Surdeigsstarter','Bakepulver','Annet'],unit:'g',start:5,end:500,step:5},
+{id:'sweet',title:'🍯 Sukker og sirup',types:['Sukker','Brunt sukker','Honning','Lys sirup','Mørk sirup','Annet'],unit:'g',start:5,end:200,step:5,units:['g','ml']},
+{id:'other',title:'➕ Andre ingredienser',types:['Surdeigsstarter','Bakepulver','Annet'],unit:'g',start:5,end:500,step:5,units:['g','ml']},
 {id:'yeast',title:'🍞 Gjær',types:['Fersk gjær','Tørrgjær'],unit:'g',start:1,end:100,step:1}
 ];
 let recipeId=null, photoData=[], db;
@@ -44,18 +44,21 @@ function addRow(spec,data={}){
  const types=spec.types.slice();if(data.type&&!types.includes(data.type))types.push(data.type);
  opt(type,types.map(t=>[t,t]),data.type||spec.types[0]);
  const amount=document.createElement('select');amount.setAttribute('aria-label','Mengde');
- const unit=document.createElement('select');unit.setAttribute('aria-label','Enhet');
- const units=spec.units||[spec.unit];opt(unit,units.map(x=>[x,x]),data.unit||spec.unit);if(units.length===1){unit.disabled=true;unit.setAttribute('aria-label','Enhet '+spec.unit)}
+ const units=spec.units||[spec.unit];
+ const unit=document.createElement(units.length===1?'span':'select');
+ unit.setAttribute('aria-label','Enhet');
+ if(units.length===1){unit.textContent=spec.unit;unit.dataset.unit=spec.unit}
+ else opt(unit,units.map(x=>[x,x]),data.unit||spec.unit);
  const custom=document.createElement('input');custom.type='number';custom.inputMode='decimal';custom.min='0';custom.step='any';custom.placeholder='Skriv egen mengde';custom.value=data.amount??'';custom.setAttribute('aria-label','Egen mengde');custom.className='custom';
  function updateAmounts(){
-   const u=unit.value;const opts=numberOptions(spec.start,spec.end,spec.step,u);
+   const u=unit.value||unit.dataset.unit;const opts=numberOptions(spec.start,spec.end,spec.step,u);
    const saved=data.amount??spec.start;
    const valid=opts.some(([v])=>String(v)===String(saved));
    opt(amount,opts,data.custom||!valid?'custom':saved);
    custom.hidden=amount.value!=='custom';
  }
  amount.onchange=()=>{custom.hidden=amount.value!=='custom'};
- unit.onchange=()=>{data={...data,amount:amount.value==='custom'?custom.value:amount.value,custom:amount.value==='custom'};updateAmounts()};
+ if(units.length>1)unit.onchange=()=>{data={...data,amount:amount.value==='custom'?custom.value:amount.value,custom:amount.value==='custom'};updateAmounts()};
  const remove=document.createElement('button');remove.type='button';remove.className='secondary';remove.textContent='×';remove.setAttribute('aria-label','Fjern ingrediens');remove.onclick=()=>holder.remove();
  const holder=document.createElement('div');holder.dataset.row='yes';row.append(type,amount,unit,remove);holder.append(row,custom);
  if(spec.id==='liquid'){
@@ -84,7 +87,7 @@ function status(t){$('status').textContent=t}
 function newRecipe(r){recipeId=r?.id||null;$('editorTitle').textContent=r?'Rediger oppskrift':'Ny oppskrift';$('name').value=r?.name||'';$('date').value=r?.date||new Date().toLocaleDateString('sv-SE');$('count').value=r?.count||1;$('weight').value=r?.weight||750;$('proof').value=r?.proof||45;$('temp').value=r?.temp||220;$('bake').value=r?.bake||40;$('notes').value=r?.notes||'';photoData=[...(r?.photos||[])];for(const s of specs){$('rows-'+s.id).replaceChildren();const rows=r?.ingredients?.[s.id]||[{}];rows.forEach(x=>addRow(s,x))}showPhotos();$('deleteBtn').hidden=!r;status('')}
 function showPhotos(){const area=$('photoList');area.replaceChildren();photoData.forEach((p,i)=>{const box=document.createElement('div');box.className='photo';const img=document.createElement('img');img.src=p;img.alt='Brødbilde '+(i+1);const btn=document.createElement('button');btn.className='secondary small';btn.textContent='Fjern';btn.onclick=()=>{photoData.splice(i,1);showPhotos()};box.append(img,btn);area.append(box)})}
 async function compress(file){return new Promise((resolve,reject)=>{const img=new Image(),url=URL.createObjectURL(file);img.onload=()=>{try{const scale=Math.min(1,1400/Math.max(img.width,img.height)),canvas=document.createElement('canvas');canvas.width=Math.round(img.width*scale);canvas.height=Math.round(img.height*scale);canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);URL.revokeObjectURL(url);resolve(canvas.toDataURL('image/jpeg',.78))}catch(e){reject(e)}};img.onerror=()=>{URL.revokeObjectURL(url);reject(new Error('Bildeformatet støttes ikke'))};img.src=url})}
-function getIngredients(){const o={};for(const s of specs){o[s.id]=Array.from($('rows-'+s.id).children).map(holder=>{const row=holder.querySelector('.ingredient'),sels=row.querySelectorAll('select');const inp=holder.querySelector('input');return {type:sels[0].value,amount:Number(sels[1].value==='custom'?inp.value:sels[1].value),custom:sels[1].value==='custom',unit:sels[2].value,...(s.id==='liquid'&&sels[0].value==='Vann'?{waterTemp:Number(holder.querySelector('[data-temperature] select').value)}:{})}})}return o}
+function getIngredients(){const o={};for(const s of specs){o[s.id]=Array.from($('rows-'+s.id).children).map(holder=>{const row=holder.querySelector('.ingredient'),sels=row.querySelectorAll('select');const inp=holder.querySelector('input');return {type:sels[0].value,amount:Number(sels[1].value==='custom'?inp.value:sels[1].value),custom:sels[1].value==='custom',unit:row.querySelector('[aria-label="Enhet"]').value||row.querySelector('[aria-label="Enhet"]').dataset.unit,...(s.id==='liquid'&&sels[0].value==='Vann'?{waterTemp:Number(holder.querySelector('[data-temperature] select').value)}:{})}})}return o}
 function openDB(){return new Promise((res,rej)=>{const req=indexedDB.open('brodjournal-v12',1);req.onupgradeneeded=()=>req.result.createObjectStore('recipes',{keyPath:'id'});req.onsuccess=()=>res(req.result);req.onerror=()=>rej(req.error)})}
 async function allRecipes(){db ||= await openDB();return new Promise((res,rej)=>{let q=db.transaction('recipes').objectStore('recipes').getAll();q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error)})}
 async function put(r){db ||= await openDB();return new Promise((res,rej)=>{const tx=db.transaction('recipes','readwrite');tx.objectStore('recipes').put(r);tx.oncomplete=res;tx.onerror=()=>rej(tx.error)})}
